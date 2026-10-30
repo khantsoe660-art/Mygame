@@ -1,0 +1,76 @@
+
+name: Build Pixel Survival APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            git zip unzip openjdk-17-jdk \
+            python3-pip python3-venv \
+            build-essential autoconf libtool \
+            pkg-config zlib1g-dev libncurses5-dev \
+            libncursesw5-dev libtinfo6 cmake \
+            libffi-dev libssl-dev
+
+      - name: Install Buildozer
+        run: |
+          python -m pip install --upgrade pip
+          pip install buildozer cython==0.29.36
+
+      - name: Extract game ZIP
+        run: |
+          unzip pixel_survival-5.zip -d game
+          find game -name main.py
+
+      - name: Locate game folder
+        run: |
+          MAIN=$(find game -name main.py | head -n 1)
+          if [ -z "$MAIN" ]; then
+            echo "main.py not found"
+            exit 1
+          fi
+          GAME_DIR=$(dirname "$MAIN")
+          cp -r "$GAME_DIR"/. .
+          ls -la
+
+      - name: Create Buildozer spec
+        run: |
+          buildozer init
+          sed -i 's/^title = .*/title = Pixel Survival/' buildozer.spec
+          sed -i 's/^package.name = .*/package.name = pixelsurvival/' buildozer.spec
+          sed -i 's/^package.domain = .*/package.domain = org.sato/' buildozer.spec
+          sed -i 's/^source.include_exts = .*/source.include_exts = py,png,jpg,ogg,wav,mp3,json,ttf,txt/' buildozer.spec
+          sed -i 's/^requirements = .*/requirements = python3,pygame/' buildozer.spec
+          sed -i 's/^orientation = .*/orientation = landscape/' buildozer.spec
+          sed -i 's/^fullscreen = .*/fullscreen = 1/' buildozer.spec
+          sed -i 's/^android.api = .*/android.api = 33/' buildozer.spec
+          sed -i 's/^android.minapi = .*/android.minapi = 23/' buildozer.spec
+          sed -i 's/^android.archs = .*/android.archs = arm64-v8a/' buildozer.spec
+          echo "p4a.bootstrap = sdl2" >> buildozer.spec
+
+      - name: Build APK
+        run: |
+          buildozer -v android debug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pixel-Survival-APK
+          path: bin/*.apk
+          
