@@ -26,6 +26,25 @@ jobs:
             libncursesw5-dev libtinfo6 cmake \
             libffi-dev libssl-dev
 
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: |
+            platforms;android-33
+            build-tools;33.0.2
+            platform-tools
+            cmdline-tools;latest
+
+      - name: Configure Android SDK
+        run: |
+          echo "ANDROIDSDK=$ANDROID_HOME" >> $GITHUB_ENV
+          echo "ANDROIDNDK=$ANDROID_HOME/ndk/27.2.12479018" >> $GITHUB_ENV
+
+      - name: Install Android NDK
+        run: |
+          yes | sdkmanager --licenses
+          sdkmanager "ndk;27.2.12479018"
+
       - name: Install Buildozer
         run: |
           python -m pip install --upgrade pip
@@ -36,8 +55,6 @@ jobs:
           unzip pixel_survival-5.zip -d game
           cp -a game/pixel_survival/. .
           cp survival_game.py main.py
-          echo "Game files:"
-          ls -la
           test -f main.py
           test -f game_data.py
           test -f sound.py
@@ -56,7 +73,7 @@ jobs:
           sed -i 's/^android.api = .*/android.api = 33/' buildozer.spec
           sed -i 's/^android.minapi = .*/android.minapi = 23/' buildozer.spec
           sed -i 's/^android.archs = .*/android.archs = arm64-v8a/' buildozer.spec
-          sed -i 's/^android.permissions = .*/android.permissions = INTERNET/' buildozer.spec
+          sed -i 's/^android.ndk = .*/android.ndk = 27c/' buildozer.spec
 
       - name: Build APK
         run: |
@@ -68,3 +85,5 @@ jobs:
           name: Pixel-Survival-APK
           path: bin/*.apk
           if-no-files-found: error
+
+
